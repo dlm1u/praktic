@@ -1,100 +1,237 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 interface ProfileProps {
-user: { email: string; role: string } | null;
-  setUser: (user: { email: string; role: string } | null) => void;
+  user: { email: string; role: string } | null;
+  setUser: (u: { email: string; role: string } | null) => void;
 }
 
 export default function Profile({ user, setUser }: ProfileProps) {
-  const [isLoginView, setIsLoginView] = useState(true); // Переключатель Вход / Регистрация
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    const endpoint = isLoginView ? 'login' : 'register';
-
-    try {
-      const response = await axios.post(`http://localhost:3000/api/auth/${endpoint}`, { email, password });
-      
-      if (response.data.success) {
-        // Сохраняем токен в localStorage
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Произошла ошибка при аутентификации');
+    if (email && password) {
+      setUser({ email, role: email.includes('admin') ? 'admin' : 'user' });
+      setMessage(`Добро пожаловать, ${email}`);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     setUser(null);
-    setEmail('');
-    setPassword('');
+    setMessage('Вы вышли из аккаунта');
   };
 
-  // Если пользователь уже вошел
-  if (user) {
-    return (
-      <div style={{ maxWidth: '400px', margin: '50px auto', textAlign: 'center', backgroundColor: '#1a1a1a', padding: '40px', borderRadius: '12px', border: '1px solid #444' }}>
-        <h2>👤 Личный кабинет</h2>
-        <p style={{ color: '#aaa', margin: '20px 0' }}>Вы вошли как: <strong>{user.email}</strong></p>
-        <button 
-          onClick={handleLogout}
-          style={{ width: '100%', padding: '12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          Выйти из аккаунта
-        </button>
-      </div>
-    );
-  }
-
-  // Экран входа / регистрации
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', backgroundColor: '#1a1a1a', padding: '40px', borderRadius: '12px', border: '1px solid #444' }}>
-      <h2>{isLoginView ? '🔑 Вход на сайт' : '📝 Регистрация'}</h2>
-      
-      {error && <div style={{ color: '#e74c3c', marginBottom: '15px', fontSize: '14px' }}>{error}</div>}
+    <div style={{ maxWidth: '480px', margin: '0 auto', paddingTop: '60px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px', opacity: 0.4 }}>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="14" r="7" stroke="#2D2D2D" strokeWidth="1.5"/>
+            <path d="M8 34C8 29 13 26 20 26C27 26 32 29 32 34" stroke="#2D2D2D" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <h1 style={{
+          fontSize: 'clamp(28px, 4vw, 36px)',
+          fontWeight: 300,
+          fontFamily: 'var(--serif)',
+          color: 'var(--text-main)',
+          marginBottom: '8px'
+        }}>
+          {user ? 'Личный кабинет' : 'Вход в аккаунт'}
+        </h1>
+        <p style={{
+          color: 'var(--text-muted)',
+          fontSize: '14px',
+          fontFamily: 'var(--sans)',
+          fontWeight: 300
+        }}>
+          {user ? 'Управление заявками и профилем' : 'Персональный доступ к сервису'}
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-        <input 
-          type="email" 
-          placeholder="Email" 
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#242424', color: '#fff' }}
-        />
-        <input 
-          type="password" 
-          placeholder="Пароль" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#242424', color: '#fff' }}
-        />
-        
-        <button type="submit" style={{ padding: '12px', backgroundColor: '#646cff', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-          {isLoginView ? 'Войти' : 'Зарегистрироваться'}
-        </button>
-      </form>
+      {message && (
+        <div style={{
+          textAlign: 'center',
+          padding: '14px 20px',
+          backgroundColor: 'var(--bg-warm)',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          fontSize: '13px',
+          fontFamily: 'var(--sans)',
+          fontWeight: 300,
+          color: 'var(--text-main)',
+          border: '1px solid var(--border-light)'
+        }}>
+          {message}
+        </div>
+      )}
 
-      <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#aaa' }}>
-        {isLoginView ? 'Ещё нет аккаунта?' : 'Уже есть аккаунт?'} {' '}
-        <span 
-          onClick={() => { setIsLoginView(!isLoginView); setError(''); }} 
-          style={{ color: '#646cff', cursor: 'pointer', textDecoration: 'underline' }}
-        >
-          {isLoginView ? 'Зарегистрироваться' : 'Войти'}
-        </span>
-      </p>
+      {user ? (
+        <div style={{
+          backgroundColor: 'var(--card-bg)',
+          padding: '36px',
+          borderRadius: '20px',
+          border: '1px solid var(--border-light)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px' }}>
+            <div style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--bg-warm)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: '16px',
+              fontSize: '24px',
+              fontFamily: 'var(--serif)',
+              color: 'var(--text-muted)'
+            }}>
+              {user.email[0].toUpperCase()}
+            </div>
+            <h3 style={{
+              margin: '0 0 4px 0',
+              fontSize: '18px',
+              fontFamily: 'var(--serif)',
+              fontWeight: 400,
+              color: 'var(--text-main)'
+            }}>
+              {user.email}
+            </h3>
+            <span style={{
+              fontSize: '11px',
+              fontFamily: 'var(--sans)',
+              fontWeight: 400,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-light)'
+            }}>
+              {user.role === 'admin' ? 'Администратор' : 'Клиент'}
+            </span>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '14px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontFamily: 'var(--sans)',
+              fontWeight: 400,
+              cursor: 'pointer',
+              letterSpacing: '0.02em'
+            }}
+          >
+            Выйти
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          backgroundColor: 'var(--card-bg)',
+          padding: '36px',
+          borderRadius: '20px',
+          border: '1px solid var(--border-light)'
+        }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '28px' }}>
+            {(['login', 'register'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  fontSize: '12px',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: mode === m ? 500 : 400,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  backgroundColor: mode === m ? 'var(--text-main)' : 'transparent',
+                  color: mode === m ? 'var(--bg-color)' : 'var(--text-muted)',
+                  border: `1px solid ${mode === m ? 'var(--text-main)' : 'var(--border-color)'}`,
+                  borderRadius: '100px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {m === 'login' ? 'Войти' : 'Регистрация'}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '14px',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: 300,
+                  backgroundColor: 'var(--bg-color)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  fontSize: '14px',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: 300,
+                  backgroundColor: 'var(--bg-color)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '16px',
+                backgroundColor: 'var(--text-main)',
+                color: 'var(--bg-color)',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontFamily: 'var(--sans)',
+                fontWeight: 500,
+                letterSpacing: '0.04em',
+                cursor: 'pointer',
+                marginTop: '8px'
+              }}
+            >
+              {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

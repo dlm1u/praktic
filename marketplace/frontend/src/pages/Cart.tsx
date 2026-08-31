@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { CartItem } from '../App';
 
 const lilacSmall = (
@@ -11,11 +11,9 @@ const lilacSmall = (
 interface CartProps {
   cart: CartItem[];
   updateQuantity: (id: number, delta: number) => void;
-  clearCart: () => void;
 }
 
 export default function Cart({ cart, updateQuantity }: CartProps) {
-  const navigate = useNavigate();
   const totalPrice = cart.reduce((sum, item) => sum + item.price_rub * item.quantity, 0);
 
   if (cart.length === 0) {
@@ -267,9 +265,10 @@ export default function Cart({ cart, updateQuantity }: CartProps) {
           </div>
         </div>
 
-        <button
-          onClick={() => navigate('/checkout')}
-          style={{
+        <Link to="/checkout" style={{
+          textDecoration: 'none'
+        }}>
+          <button style={{
             backgroundColor: 'var(--text-main)',
             color: 'var(--bg-color)',
             border: 'none',
@@ -280,11 +279,12 @@ export default function Cart({ cart, updateQuantity }: CartProps) {
             fontWeight: 500,
             letterSpacing: '0.04em',
             cursor: 'pointer'
-          }}
-        >
-          Оформить заявку
-        </button>
+          }}>
+            Оформить заявку
+          </button>
+        </Link>
       </div>
     </div>
   );
 }
+

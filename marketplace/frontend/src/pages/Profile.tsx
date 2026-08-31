@@ -1,31 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
-interface ProfileProps {
-  user: { email: string; role: string } | null;
-  setUser: (u: { email: string; role: string } | null) => void;
+interface Order {
+  id: number;
+  user_id: number;
+  total_price: number;
+  status: string;
+  created_at: string;
 }
 
-export default function Profile({ user, setUser }: ProfileProps) {
-  const [email, setEmail] = useState(user?.email || '');
-  const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [message, setMessage] = useState('');
+export default function Profile() {
+  const { user, logout } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email && password) {
-      setUser({ email, role: email.includes('admin') ? 'admin' : 'user' });
-      setMessage(`Добро пожаловать, ${email}`);
+  const statusLabels: Record<string, string> = {
+    'pending_buyout': 'Ожидает проверки',
+    'approved': 'Одобрена',
+    'rejected': 'Отклонена',
+  };
+
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    'pending_buyout': { bg: '#FFF3E0', text: '#E65100' },
+    'approved': { bg: '#E8F5E9', text: '#2E7D32' },
+    'rejected': { bg: '#FFEBEE', text: '#C62828' },
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'user') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        setLoading(true);
+        fetch('http://localhost:3000/api/orders', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
+          .then(res => res.json())
+          .then(data => { setOrders(data); })
+          .catch(() => {})
+          .finally(() => setLoading(false));
+      }
     }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setMessage('Вы вышли из аккаунта');
-  };
+  }, [user]);
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto', paddingTop: '60px' }}>
+    <div style={{ maxWidth: '640px', margin: '0 auto', paddingTop: '60px' }}>
       <div style={{ textAlign: 'center', marginBottom: '48px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px', opacity: 0.4 }}>
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -40,7 +70,7 @@ export default function Profile({ user, setUser }: ProfileProps) {
           color: 'var(--text-main)',
           marginBottom: '8px'
         }}>
-          {user ? 'Личный кабинет' : 'Вход в аккаунт'}
+          Личный кабинет
         </h1>
         <p style={{
           color: 'var(--text-muted)',
@@ -48,26 +78,9 @@ export default function Profile({ user, setUser }: ProfileProps) {
           fontFamily: 'var(--sans)',
           fontWeight: 300
         }}>
-          {user ? 'Управление заявками и профилем' : 'Персональный доступ к сервису'}
+          Управление заявками и профилем
         </p>
       </div>
-
-      {message && (
-        <div style={{
-          textAlign: 'center',
-          padding: '14px 20px',
-          backgroundColor: 'var(--bg-warm)',
-          borderRadius: '12px',
-          marginBottom: '24px',
-          fontSize: '13px',
-          fontFamily: 'var(--sans)',
-          fontWeight: 300,
-          color: 'var(--text-main)',
-          border: '1px solid var(--border-light)'
-        }}>
-          {message}
-        </div>
-      )}
 
       {user ? (
         <div style={{
@@ -113,8 +126,126 @@ export default function Profile({ user, setUser }: ProfileProps) {
             </span>
           </div>
 
+          {user.role === 'user' && (
+            <>
+              <Link to="/cart" style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px',
+                backgroundColor: 'var(--text-main)',
+                color: 'var(--bg-color)',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontFamily: 'var(--sans)',
+                fontWeight: 500,
+                cursor: 'pointer',
+                letterSpacing: '0.02em',
+                textDecoration: 'none',
+                textAlign: 'center',
+                marginBottom: '12px'
+              }}>
+                🛒 Перейти в корзину
+              </Link>
+
+              <div style={{
+                marginTop: '24px',
+                paddingTop: '24px',
+                borderTop: '1px solid var(--border-color)'
+              }}>
+                <h4 style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '14px',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: 500,
+                  color: 'var(--text-main)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  История заказов
+                </h4>
+
+                {loading ? (
+                  <p style={{
+                    margin: 0,
+                    fontSize: '13px',
+                    fontFamily: 'var(--sans)',
+                    fontWeight: 300,
+                    color: 'var(--text-muted)',
+                    textAlign: 'center',
+                    padding: '16px 0'
+                  }}>
+                    Загрузка...
+                  </p>
+                ) : orders.length === 0 ? (
+                  <p style={{
+                    margin: 0,
+                    fontSize: '13px',
+                    fontFamily: 'var(--sans)',
+                    fontWeight: 300,
+                    color: 'var(--text-muted)',
+                    textAlign: 'center',
+                    padding: '16px 0'
+                  }}>
+                    У вас пока нет заказов
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {orders.map((order) => {
+                      const s = statusColors[order.status] || statusColors['pending_buyout'];
+                      return (
+                        <div key={order.id} style={{
+                          backgroundColor: 'var(--bg-color)',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          border: '1px solid var(--border-color)'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '8px'
+                          }}>
+                            <span style={{
+                              fontSize: '13px',
+                              fontFamily: 'var(--sans)',
+                              color: 'var(--text-muted)',
+                              fontWeight: 300
+                            }}>
+                              #{order.id} · {formatDate(order.created_at)}
+                            </span>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 10px',
+                              borderRadius: '100px',
+                              fontSize: '11px',
+                              fontFamily: 'var(--sans)',
+                              fontWeight: 500,
+                              backgroundColor: s.bg,
+                              color: s.text
+                            }}>
+                              {statusLabels[order.status] || order.status}
+                            </span>
+                          </div>
+                          <div style={{
+                            fontSize: '16px',
+                            fontFamily: 'var(--sans)',
+                            fontWeight: 500,
+                            color: 'var(--text-main)'
+                          }}>
+                            {order.total_price.toLocaleString('ru-RU')} ₽
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <button
-            onClick={handleLogout}
+            onClick={logout}
             style={{
               width: '100%',
               padding: '14px',
@@ -126,110 +257,33 @@ export default function Profile({ user, setUser }: ProfileProps) {
               fontFamily: 'var(--sans)',
               fontWeight: 400,
               cursor: 'pointer',
-              letterSpacing: '0.02em'
+              letterSpacing: '0.02em',
+              marginTop: '24px'
             }}
           >
             Выйти
           </button>
         </div>
       ) : (
-        <div style={{
-          backgroundColor: 'var(--card-bg)',
-          padding: '36px',
-          borderRadius: '20px',
-          border: '1px solid var(--border-light)'
-        }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '28px' }}>
-            {(['login', 'register'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  fontSize: '12px',
-                  fontFamily: 'var(--sans)',
-                  fontWeight: mode === m ? 500 : 400,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  backgroundColor: mode === m ? 'var(--text-main)' : 'transparent',
-                  color: mode === m ? 'var(--bg-color)' : 'var(--text-muted)',
-                  border: `1px solid ${mode === m ? 'var(--text-main)' : 'var(--border-color)'}`,
-                  borderRadius: '100px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {m === 'login' ? 'Войти' : 'Регистрация'}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '14px',
-                  fontFamily: 'var(--sans)',
-                  fontWeight: 300,
-                  backgroundColor: 'var(--bg-color)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '10px',
-                  color: 'var(--text-main)',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Пароль"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '14px',
-                  fontFamily: 'var(--sans)',
-                  fontWeight: 300,
-                  backgroundColor: 'var(--bg-color)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '10px',
-                  color: 'var(--text-main)',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            <button
-              type="submit"
-              style={{
-                width: '100%',
-                padding: '16px',
-                backgroundColor: 'var(--text-main)',
-                color: 'var(--bg-color)',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontFamily: 'var(--sans)',
-                fontWeight: 500,
-                letterSpacing: '0.04em',
-                cursor: 'pointer',
-                marginTop: '8px'
-              }}
-            >
-              {mode === 'login' ? 'Войти' : 'Создать аккаунт'}
-            </button>
-          </form>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '20px' }}>
+            Для просмотра заказов необходимо войти в аккаунт
+          </p>
+          <Link to="/login" style={{
+            display: 'inline-block',
+            padding: '14px 32px',
+            backgroundColor: 'var(--text-main)',
+            color: 'var(--bg-color)',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontFamily: 'var(--sans)',
+            fontWeight: 500,
+            textDecoration: 'none',
+            cursor: 'pointer'
+          }}>
+            Войти
+          </Link>
         </div>
       )}
     </div>
